@@ -51,7 +51,7 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
 		the value of state s
 	"""
 
-	V = np.zeros(nS)
+	V = np.zeros(nS, dtype=float)
 
 	############################
 	# YOUR IMPLEMENTATION HERE #
@@ -60,6 +60,7 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
 	firstIter = True
 
 	while np.abs(np.max(V) - np.max(pV)) > tol or firstIter:
+
 		firstIter = False
 		pV = V.copy()
 		for state in range(nS):
@@ -96,14 +97,15 @@ def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
 	############################
 	# YOUR IMPLEMENTATION HERE #
 
-	Q = np.zeros((nS, nA))
+	Q = np.zeros(nA)
 
 	for state in range(nS):
 		for action in range(nA):
 			for probability, nextState, reward, terminal in P[state][action]:
-				Q[state][action] = probability*(reward + gamma*value_from_policy[nextState])
+				Q[action] = probability*(reward + gamma*value_from_policy[nextState])
 
-	new_policy = np.argmax(Q, axis=1)
+		maxPos = np.argwhere(Q == np.amax(Q)).ravel()
+		new_policy[state] = np.random.choice(maxPos)
 
 	############################
 	return new_policy
