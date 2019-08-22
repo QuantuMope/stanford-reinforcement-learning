@@ -1,4 +1,4 @@
-# [CS234: Reinforcement Learning Winter 2019](http://web.stanford.edu/class/cs234/index.html)
+# [CS234: Reinforcement Learning](http://web.stanford.edu/class/cs234/index.html)
 
 ***
 
@@ -13,7 +13,6 @@
 
 <p align="justify">
 To realize the dreams and impact of AI requires autonomous systems that learn to make good decisions. Reinforcement learning is one powerful paradigm for doing so, and it is relevant to an enormous range of tasks, including robotics, game playing, consumer modeling and healthcare. This class will provide a solid introduction to the field of reinforcement learning and students will learn about the core challenges and approaches, including generalization and exploration. Through a combination of lectures, and written and coding assignments, students will become well versed in key ideas and techniques for RL. Assignments will include the basics of reinforcement learning as well as deep reinforcement learning — an extremely promising new area that combines deep learning techniques with reinforcement learning. In addition, students will advance their understanding and the field of RL through a final project.
-You can find last year (Winter 2018) materials [here](./CS234Win2018/index.html).
 </p>
 
 ### Learning Outcomes
