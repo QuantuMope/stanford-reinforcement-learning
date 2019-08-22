@@ -57,16 +57,17 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
     # YOUR IMPLEMENTATION HERE #
 
     pV = V.copy()
-    firstIter = True
 
-    while np.abs(np.max(V) - np.max(pV)) > tol or firstIter:
+    while True:
 
-        firstIter = False
         pV = V.copy()
+
         for state in range(nS):
             action = policy[state]
-            for probability, nextState, reward, terminal in P[state][action]:
-                V[state] += probability*(reward + gamma*pV[nextState])
+            probability, nextState, reward, terminal = P[state][action][0]
+            V[state] = probability*(reward + gamma*pV[nextState])
+
+        if np.all(np.abs(V - pV) < tol): break
 
     ############################
     return V
@@ -92,7 +93,7 @@ def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
         given value function.
     """
 
-    new_policy = np.zeros(nS, dtype='int')
+    new_policy = policy.copy()
 
     ############################
     # YOUR IMPLEMENTATION HERE #
@@ -101,9 +102,10 @@ def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
 
     for state in range(nS):
         for action in range(nA):
-            for probability, nextState, reward, terminal in P[state][action]:
-                Q[action] = probability*(reward + gamma*value_from_policy[nextState])
+            probability, nextState, reward, terminal = P[state][action][0]
+            Q[action] = probability*(reward + gamma*value_from_policy[nextState])
 
+        # np.argmax does not randomly tie break, so implement this method
         maxPos = np.argwhere(Q == np.amax(Q)).ravel()
         new_policy[state] = np.random.choice(maxPos)
 
@@ -111,7 +113,7 @@ def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
     return new_policy
 
 
-def policy_iteration(P, nS, nA, gamma=0.9, tol=10e-3):
+def policy_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
     """Runs policy iteration.
 
     You should call the policy_evaluation() and policy_improvement() methods to
@@ -135,18 +137,23 @@ def policy_iteration(P, nS, nA, gamma=0.9, tol=10e-3):
     ############################
     # YOUR IMPLEMENTATION HERE #
 
-    prev_policy = policy.copy()
+    iterations = 0
     firstIter = True
 
-    while np.linalg.norm(policy - prev_policy, 1) > tol or firstIter:
-
-        firstIter = False
+    while True:
+        iterations += 1
+        pV = V.copy()
         prev_policy = policy.copy()
 
         V = policy_evaluation(P, nS, nA, policy, gamma, tol)
 
-        policy = policy_improvement(P, nS, nA, V, policy, gamma)
+        policy = policy_improvement(P, nS, nA, V, prev_policy, gamma)
 
+        if np.linalg.norm(policy - prev_policy, ord=1) < tol: break
+        if not firstIter and np.all(np.abs(V - pV) < tol): break
+        firstIter = False
+
+    print('Iterations: ' + str(iterations))
     ############################
     return V, policy
 
@@ -216,17 +223,23 @@ def render_single(env, policy, max_steps=100):
 if __name__ == "__main__":
 
     # comment/uncomment these lines to switch between deterministic/stochastic environments
-    env = gym.make("Deterministic-4x4-FrozenLake-v0")
-    # env = gym.make("Stochastic-4x4-FrozenLake-v0")
+    #env = gym.make("Deterministic-4x4-FrozenLake-v0")
+    env = gym.make("Stochastic-4x4-FrozenLake-v0")
 
     print("\n" + "-"*25 + "\nBeginning Policy Iteration\n" + "-"*25)
 
     V_pi, p_pi = policy_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
+    print('Policy Iteration')
+    print('  Optimal Value Function: %r' % V_pi)
+    print('  Optimal Policy:         %r' % p_pi)
     render_single(env, p_pi, 100)
 
     # print("\n" + "-"*25 + "\nBeginning Value Iteration\n" + "-"*25)
     #
     # V_vi, p_vi = value_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
+    # print('Value Iteration')
+    # print('  Optimal Value Function: %r' % V_vi)
+    # print('  Optimal Policy:         %r' % p_vi)
     # render_single(env, p_vi, 100)
 
 
