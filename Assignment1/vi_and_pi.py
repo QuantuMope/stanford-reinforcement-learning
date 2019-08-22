@@ -150,6 +150,8 @@ def policy_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
         policy = policy_improvement(P, nS, nA, V, prev_policy, gamma)
 
         if np.linalg.norm(policy - prev_policy, ord=1) < tol: break
+        # often times value function has converged but there are many tie
+        # policies; this cancels unproductive continuous policy switching
         if not firstIter and np.all(np.abs(V - pV) < tol): break
         firstIter = False
 
@@ -172,18 +174,35 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
             max |value_function(s) - prev_value_function(s)| < tol
     Returns:
     ----------
-    value_function: np.ndarray[nS]
+    V: np.ndarray[nS]
     policy: np.ndarray[nS]
     """
 
-    value_function = np.zeros(nS)
+    V = np.zeros(nS)
     policy = np.zeros(nS, dtype=int)
     ############################
     # YOUR IMPLEMENTATION HERE #
 
+    iterations = 0
 
+    while True:
+        iterations += 1
+        pV = V.copy()
+        Q = np.zeros(nA)
+
+        for state in range(nS):
+            for action in range(nA):
+                probability, nextState, reward, terminal = P[state][action][0]
+                Q[action] = probability * (reward + gamma * V[nextState])
+
+            V[state] = np.amax(Q)
+
+        if np.all(np.abs(V - pV) < tol) : break
+
+    policy = policy_improvement(P, nS, nA, V, policy, gamma)
+    print("Iterations: " + str(iterations))
     ############################
-    return value_function, policy
+    return V, policy
 
 
 def render_single(env, policy, max_steps=100):
@@ -223,8 +242,8 @@ def render_single(env, policy, max_steps=100):
 if __name__ == "__main__":
 
     # comment/uncomment these lines to switch between deterministic/stochastic environments
-    #env = gym.make("Deterministic-4x4-FrozenLake-v0")
-    env = gym.make("Stochastic-4x4-FrozenLake-v0")
+    env = gym.make("Deterministic-4x4-FrozenLake-v0")
+    #env = gym.make("Stochastic-4x4-FrozenLake-v0")
 
     print("\n" + "-"*25 + "\nBeginning Policy Iteration\n" + "-"*25)
 
@@ -234,12 +253,12 @@ if __name__ == "__main__":
     print('  Optimal Policy:         %r' % p_pi)
     render_single(env, p_pi, 100)
 
-    # print("\n" + "-"*25 + "\nBeginning Value Iteration\n" + "-"*25)
-    #
-    # V_vi, p_vi = value_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
-    # print('Value Iteration')
-    # print('  Optimal Value Function: %r' % V_vi)
-    # print('  Optimal Policy:         %r' % p_vi)
-    # render_single(env, p_vi, 100)
+    print("\n" + "-"*25 + "\nBeginning Value Iteration\n" + "-"*25)
+
+    V_vi, p_vi = value_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
+    print('Value Iteration')
+    print('  Optimal Value Function: %r' % V_vi)
+    print('  Optimal Policy:         %r' % p_vi)
+    render_single(env, p_vi, 100)
 
 
