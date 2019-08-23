@@ -32,7 +32,9 @@ the parameters P, nS, nA, gamma are defined as follows:
         Discount factor. Number in range [0, 1)
 """
 
-def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
+
+def policy_evaluation(P, nS, nA, oldV, policy, gamma=0.9, tol=1e-3):
+
     """Evaluate the value function from a given policy.
 
     Parameters
@@ -54,7 +56,14 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
     ############################
     # YOUR IMPLEMENTATION HERE #
 
-    newV = np.zeros(nS, dtype=float)
+    """ !!! ADDED PREV VALUE FUNCTION AS PARAMETER TO IMPROVE SPEED !!! """
+
+    # To be honest, do not know why this was not included in Stanford's starter code
+    # as this now allows policy iteration to be faster than value iteration.
+    # Without this, policy evaluation has to re-converge to original value function
+    # allowing value iteration to be usually faster.
+
+    newV = oldV.copy()
 
     while True:
         # Each iteration is a Bellman Backup
@@ -151,7 +160,7 @@ def policy_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
         policy = newPolicy.copy()
 
         # Calculate the value function for the given policy
-        newV = policy_evaluation(P, nS, nA, policy, gamma, tol)
+        newV = policy_evaluation(P, nS, nA, V, policy, gamma, tol)
 
         # Using the new value function, create a new improved policy
         newPolicy = policy_improvement(P, nS, nA, newV, policy, gamma)
