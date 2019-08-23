@@ -7,7 +7,7 @@ Particularly, in vi_and_pi.py, implement:
 - Policy Iteration
 - Value Iteration
 
-in order to solve the Deterministic and Stochastic 4x4 environments from OpenAI gym.
+in order to solve the [Deterministic and Stochastic 4x4 Frozen Lake](https://gym.openai.com/envs/FrozenLake-v0/) environments from OpenAI gym.
 
 ### Quote from Sutton & Barton's Reinforcement Learning: An Introduction 2nd Edition
 I believe this quote from Sutton and Barton's textbook eloquently describes what the value function represents.
