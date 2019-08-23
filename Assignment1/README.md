@@ -36,10 +36,12 @@ policy derived from an optimal value function is itself optimal.
 
 In contrast, policy iteration performs Bellman backups for the value function
 following a given policy where the policy is updated whenever the value function
-converges for a suboptimal policy. This is repeated until either the policy or
-value function converges.
+converges for a suboptimal policy. The policy is updated by computing the values of
+choosing an action and **then** following the current policy for all possible actions. If any of these values
+are greater than the current value for a certain state, then the policy is updated accordingly to the new action.
+This is repeated until either the policy or value function converges.
 
-Both methods when implemented correctly will converge to the same value function
+**Both methods when implemented correctly will converge to the same value function
 as there is only one unique optimal value function in a Markov Decision Process.
-Optimal policies on the other hand may be non-unique and thus be different.
+Optimal policies on the other hand may be non-unique and thus be different.**
 The pros/cons of each method pertain to computational efficiency.
