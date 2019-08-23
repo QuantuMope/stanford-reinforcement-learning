@@ -1,7 +1,8 @@
 ## Assignment 1 - Intro to Sequential Decision Making and OpenAI Gym
 
-This assignment contains written questions as well as coding assignments.
-Particularly, in vi_and_pi.py, implement:
+This assignment contains written questions as well as coding assignments. We use dynamic programming methods to compute optimal policies given a perfect model of the environment as a Markov decision process.
+
+Particularly, in vi_and_pi.py, we implement:
 - Policy Evaluation
 - Policy Improvement
 - Policy Iteration
@@ -9,15 +10,20 @@ Particularly, in vi_and_pi.py, implement:
 
 in order to solve the [Deterministic and Stochastic 4x4 Frozen Lake](https://gym.openai.com/envs/FrozenLake-v0/) environments from OpenAI gym.
 
-### Quote from Sutton & Barton's Reinforcement Learning: An Introduction 2nd Edition
-I believe this quote from Sutton and Barton's textbook eloquently describes what the value function represents.
-
+### Quotes from Sutton & Barton's Reinforcement Learning: An Introduction 2nd Edition
+__I believe this quote from Sutton and Barton's textbook eloquently describes what the value function represents:__
 
 **pg. 64**: "The beauty of v_star is that if one uses it to evaluate the short term consequences of actions - 
 specifically the one-step consequences - then a greedy policy is actually optimal in the long-term sense in which we are
 interested because *v_star already takes into account the reward consequences of all possible future behavior*. By means of
 v_star, *the optimal expected long-term return is turned into a quantity that is locally and immediately available for each state*.
 Hence, a one-step-ahead search yields the long-term optimal actions."
+
+__Also, this quote states the limitations to this assignment's approach to solving reinforcement learning problems:__
+
+**pg. 73**: "Classical DP (Dynamic Programming) algorithms are of limited utility in reinforcement learning both
+because of their assumption of a perfect model and because of their great computational expense, but they are still
+important theoretically."
 ***
 ### My Own Intuition
 Notice that in value iteration, we do not use or update a policy and
