@@ -1,5 +1,7 @@
 # [CS234: Reinforcement Learning](http://web.stanford.edu/class/cs234/index.html)
 
+### [Lectures](https://www.youtube.com/playlist?list=PLoROMvodv4rOSOPzutgyCTapiGlY2Nd8u) and [Readings](http://web.stanford.edu/class/cs234/schedule.html)
+
 ***
 
 @ Stanford, Winter 2019 </br>
