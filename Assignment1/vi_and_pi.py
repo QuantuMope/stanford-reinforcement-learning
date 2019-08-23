@@ -196,6 +196,28 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
     ############################
     # YOUR IMPLEMENTATION HERE #
 
+    """
+    --------------------------IMPORTANT INTUITION------------------------------
+    Notice that in value iteration, we do not use or update a policy and
+    therefore do not necessarily care about recording which actions were taken.
+    In each Bellman backup for value iteration, we iterate through every possible 
+    action for every state with only the max values from the best actions for each
+    state being recorded into the value function. This is repeated until the value
+    function converges. Only then is a policy formed. This policy is optimal as any
+    policy derived from an optimal value function is itself optimal.
+
+    In contrast, policy iteration performs Bellman backups for the value function
+    following a given policy where the policy is updated whenever the value function
+    converges for a suboptimal policy. This is repeated until either the policy or
+    value function converges.
+    
+    Both methods when implemented correctly will converge to the same value function
+    as there is only one unique optimal value function in a Markov Decision Process.
+    Optimal policies on the other hand may be non-unique and thus be different.
+    The pros/cons of each method pertain to computational efficiency.
+    ---------------------------------------------------------------------------
+    """
+
     V = np.zeros(nS)
     newV = V.copy()
     policy = np.zeros(nS, dtype=int)
@@ -216,13 +238,7 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
                 for probability, nextState, reward, terminal in P[state][action]:
                     B[action] += probability * (reward + gamma*V[nextState])
 
-            # Assign the max of vector B to the value function for a particular state
-            # Notice that in value iteration, we do not update the policy and therefore
-            # do not necessarily care about recording which actions were taken.
-            # Although we iterate through the actions, we do not record them; only the
-            # max value from the optimal action is recorded. This is in direct contrast
-            # to policy iteration where the optimal actions ARE recorded and used to
-            # determine the next chosen actions during policy evaluation (Bellman Backup).
+            # Assign the max of vector B to the value function for a particular state.
             newV[state] = np.amax(B)
 
         # Repeat until convergence
