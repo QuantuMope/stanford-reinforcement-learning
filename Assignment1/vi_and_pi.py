@@ -51,24 +51,27 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
         the value of state s
     """
 
-    V = np.zeros(nS, dtype=float)
-
     ############################
     # YOUR IMPLEMENTATION HERE #
 
-    while True:
+    newV = np.zeros(nS, dtype=float)
 
-        pV = V.copy()
-        V = np.zeros(nS, dtype=float)
+    while True:
+        # Each iteration is a Bellman Backup
+        V = newV.copy()
+        newV = np.zeros(nS, dtype=float)
         for state in range(nS):
             action = policy[state]
+            # store a value for each state as the sum of the weighted rewards
+            # for all possible outcomes given by the action chosen by the policy
             for probability, nextState, reward, terminal in P[state][action]:
-                V[state] += reward + gamma*probability*pV[nextState]
+                newV[state] += probability * (reward + gamma*V[nextState])
 
-        if np.all(np.abs(V - pV) < tol): break
+        # Output the value function upon convergence
+        if np.all(np.abs(newV - V) < tol): break
 
+    return newV
     ############################
-    return V
 
 
 def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
@@ -85,29 +88,34 @@ def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
 
     Returns
     -------
-    new_policy: np.ndarray[nS]
+    newPolicy: np.ndarray[nS]
         An array of integers. Each integer is the optimal action to take
         in that state according to the environment dynamics and the
         given value function.
     """
 
-    new_policy = policy.copy()
-
     ############################
     # YOUR IMPLEMENTATION HERE #
 
+    newPolicy = policy.copy()
+
     for state in range(nS):
-        B = np.zeros(nA)
+        # overwrite each Q vector for each state as there is no need to
+        # store previous state Q values
+        Q = np.zeros(nA)
         for action in range(nA):
             for probability, nextState, reward, terminal in P[state][action]:
-                B[action] += reward + gamma*probability*value_from_policy[nextState]
+                # store each (state, action) pair's value as a sum of the
+                # weighted rewards for all possible outcomes of the chosen action
+                Q[action] += probability * (reward + gamma*value_from_policy[nextState])
 
         # np.argmax does not randomly tie break, so implement this method
-        maxPos = np.argwhere(B == np.amax(B)).ravel()
-        new_policy[state] = np.random.choice(maxPos)
+        # where the new most optimal action for each state is randomly chosen
+        maxPos = np.argwhere(Q == np.amax(Q)).ravel()
+        newPolicy[state] = np.random.choice(maxPos)
 
+    return newPolicy
     ############################
-    return new_policy
 
 
 def policy_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
@@ -128,33 +136,43 @@ def policy_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
     policy: np.ndarray[nS]
     """
 
-    V = np.zeros(nS)
-
     ############################
     # YOUR IMPLEMENTATION HERE #
 
+    newV = np.zeros(nS)
     iterations = 0
     firstIter = True
-    policy = np.random.randint(0, nA, nS)
+    newPolicy = np.random.randint(0, nA, nS)
+    start = time.time()
 
     while True:
         iterations += 1
-        pV = V.copy()
-        prev_policy = policy.copy()
+        V = newV.copy()
+        policy = newPolicy.copy()
 
-        V = policy_evaluation(P, nS, nA, policy, gamma, tol)
+        # Calculate the value function for the given policy
+        newV = policy_evaluation(P, nS, nA, policy, gamma, tol)
 
-        policy = policy_improvement(P, nS, nA, V, prev_policy, gamma)
+        # Using the new value function, create a new improved policy
+        newPolicy = policy_improvement(P, nS, nA, newV, policy, gamma)
 
-        if np.linalg.norm(policy - prev_policy, ord=1) < tol: break
+        # Repeat until convergence of the policy
+        if np.linalg.norm(newPolicy - policy, ord=1) < tol: break
         # often times value function has converged but there are many tie
         # policies; this cancels unproductive continuous policy switching
-        if not firstIter and np.all(np.abs(V - pV) < tol): break
+        if not firstIter and np.all(np.abs(newV - V) < tol): break
         firstIter = False
 
+    end = time.time()
+
+    print("NOTE - Policy iteration does not count iterations of value function " + \
+          "converging for each new policy.\nTherefore, time elapsed would be a " + \
+          "better indicator of performance.\n")
     print('Policy - Iterations: ' + str(iterations))
-    ############################
+    print("Policy iteration took " + str(end - start) + " seconds to converge.")
+
     return V, policy
+    ############################
 
 
 def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
@@ -175,31 +193,53 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
     policy: np.ndarray[nS]
     """
 
-    V = np.zeros(nS)
-    newV = V.copy()
-    policy = np.zeros(nS, dtype=int)
     ############################
     # YOUR IMPLEMENTATION HERE #
 
+    V = np.zeros(nS)
+    newV = V.copy()
+    policy = np.zeros(nS, dtype=int)
     iterations = 0
+    start = time.time()
 
     while True:
+        # Each iteration is a Bellman Backup
         iterations += 1
 
         for state in range(nS):
+            # overwrite each B vector for each state as there is no need to
+            # store previous state B values
             B = np.zeros(nA)
             for action in range(nA):
+                # store each (state, action) pair's value as a sum of the
+                # weighted rewards for all possible outcomes of the chosen action
                 for probability, nextState, reward, terminal in P[state][action]:
-                    B[action] += reward + gamma*probability*V[nextState]
+                    B[action] += probability * (reward + gamma*V[nextState])
 
+            # Assign the max of vector B to the value function for a particular state
+            # Notice that in value iteration, we do not update the policy and therefore
+            # do not necessarily care about recording which actions were taken.
+            # Although we iterate through the actions, we do not record them; only the
+            # max value from the optimal action is recorded. This is in direct contrast
+            # to policy iteration where the optimal actions ARE recorded and used to
+            # determine the next chosen actions during policy evaluation (Bellman Backup).
             newV[state] = np.amax(B)
 
+        # Repeat until convergence
         if np.all(np.abs(V - newV) < tol): break
         V = newV.copy()
+
+    # Update the policy only once, once the value function has converged
+    # Any policy that employs greedy selection with an optimal value function
+    # is an optimal policy.
     policy = policy_improvement(P, nS, nA, newV, policy, gamma)
+    end = time.time()
+
     print("Value - Iterations: " + str(iterations))
-    # ############################
+    print("Value iteration took " + str(end-start) + " seconds to converge.")
+
     return newV, policy
+    # ############################
 
 
 def render_single(env, policy, max_steps=100):
@@ -220,7 +260,7 @@ def render_single(env, policy, max_steps=100):
   ob = env.reset()
   for t in range(max_steps):
     env.render()
-    time.sleep(0.4)
+    time.sleep(0.20)
     a = policy[ob]
     ob, rew, done, _ = env.step(a)
     episode_reward += rew
@@ -242,18 +282,15 @@ if __name__ == "__main__":
     #env = gym.make("Deterministic-4x4-FrozenLake-v0")
     env = gym.make("Stochastic-4x4-FrozenLake-v0")
 
-    print("\n" + "-"*25 + "\nBeginning Policy Iteration\n" + "-"*25)
-
-    V_pi, p_pi = policy_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-4)
+    V_pi, p_pi = policy_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
+    V_vi, p_vi = value_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
+    print("\n" + "-" * 25 + "\nPolicy Iteration\n" + "-" * 25)
     print('  Optimal Value Function: %r' % V_pi)
     print('  Optimal Policy:         %r' % p_pi)
-    render_single(env, p_pi, 100)
-
-    print("\n" + "-"*25 + "\nBeginning Value Iteration\n" + "-"*25)
-
-    V_vi, p_vi = value_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-4)
+    print("\n" + "-" * 25 + "\nValue Iteration\n" + "-" * 25)
     print('  Optimal Value Function: %r' % V_vi)
     print('  Optimal Policy:         %r' % p_vi)
+    print("\n" + "-" * 25 + "\nBeginning Policy Iteration\n" + "-" * 25)
+    render_single(env, p_pi, 100)
+    print("\n" + "-" * 25 + "\nBeginning Value Iteration\n" + "-" * 25)
     render_single(env, p_vi, 100)
-
-
