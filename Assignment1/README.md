@@ -45,3 +45,10 @@ This is repeated until either the policy or value function converges.
 as there is only one unique optimal value function in a Markov Decision Process.
 Optimal policies on the other hand may be non-unique and thus be different.**
 The pros/cons of each method pertain to computational efficiency.
+
+Regardless of which iteration method is used, both dynamic programming algorithms work
+due to **bootstrapping** in which we update our current estimate of the value function by using our
+previous estimate. This works because each iteration of the value function is the k-horizon value of the states under 
+a policy. In other words, it is the expected discounted sum of returns if we were to start from each state and have
+k time steps following a given policy. Due to this, we can bootstrap and update our value function by adding the expected immediate reward with the expected (k-1) value for all possible future states.
+Using this method, there is no need to compute any more steps past the first one giving the immediate reward for each update because we have already technically computed the rest of the (k-1) steps for all states under a given policy as given by our (k-1) value function. Therefore, we can **bootstrap** the rest of the value arising from future possibilities with our (k-1) value function. As k --> infinity, the value function will become an accurate estimate of the infinite horizon value of states under the policy.
