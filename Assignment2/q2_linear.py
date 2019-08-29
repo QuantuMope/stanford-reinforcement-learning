@@ -50,7 +50,18 @@ class Linear(DQN):
         ##############################################################
         ################YOUR CODE HERE (6-15 lines) ##################
 
-        pass
+        img_height, img_width, nchannels = state_shape
+
+        self.s = tf.placeholder(dtype=tf.uint8, name='states',
+                                shape=(None, img_height, img_width,
+                                       nchannels*self.config.state_history))
+        self.a = tf.placeholder(dtype=tf.int32, name='actions', shape=None)
+        self.r = tf.placeholder(dtype=tf.float32, name='rewards', shape=None)
+        self.sp = tf.placeholder(dtype=tf.uint8, name='next_states',
+                                 shape=(None, img_height, img_width,
+                                        nchannels*self.config.state_history))
+        self.done_mask = tf.placeholder(dtype=tf.bool, name='done_mask', shape=None)
+        self.lr = tf.placeholder(dtype=tf.float32, name='learning_rate')
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -87,8 +98,10 @@ class Linear(DQN):
         """
         ##############################################################
         ################ YOUR CODE HERE - 2-3 lines ################## 
-        
-        pass
+
+        with tf.variable_scope(scope, reuse=reuse):
+            flat_tensor = tf.keras.layers.Flatten(state)
+            out = tf.keras.layers.Dense(flat_tensor)
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -132,7 +145,11 @@ class Linear(DQN):
         ##############################################################
         ################### YOUR CODE HERE - 5-10 lines #############
         
-        pass
+        q_col = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=q_scope)
+        target_q_col = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=target_q_scope)
+        op = [tf.assign(target_q_col[i], q_col[i]) for i in range(len(q_col))]
+
+        self.update_target_op = tf.group(*op)
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -171,7 +188,8 @@ class Linear(DQN):
         ##############################################################
         ##################### YOUR CODE HERE - 4-5 lines #############
 
-        pass
+        not_done = 1 - tf.cast(self.done_mask, tf.int32)
+        Q_samp = self.r + not_done*self.config.gamma*tf.reduce_max(target_q)
 
         ##############################################################
         ######################## END YOUR CODE #######################
