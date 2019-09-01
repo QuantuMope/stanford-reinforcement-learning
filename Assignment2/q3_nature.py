@@ -1,5 +1,5 @@
-import tensorflow as tf
-import tensorflow.contrib.layers as layers
+import tensorflow.compat.v1 as tf
+#import tensorflow.contrib.layers as layers
 
 from utils.general import get_logger
 from utils.test_env import EnvTest
@@ -55,7 +55,13 @@ class NatureQN(Linear):
         ##############################################################
         ################ YOUR CODE HERE - 10-15 lines ################ 
 
-        pass
+        with tf.variable_scope(scope, reuse=reuse):
+            convLayer1 = tf.layers.conv2d(state, 32, 8, strides=(4, 4), activation=tf.nn.relu)
+            convLayer2 = tf.layers.conv2d(convLayer1, 64, 4, strides=(2,2), activation=tf.nn.relu)
+            convLayer3 = tf.layers.conv2d(convLayer2, 64, 3, strides=(1,1), activation=tf.nn.relu)
+            flat_input = tf.layers.flatten(convLayer3)
+            fullLayer = tf.layers.dense(flat_input, 512, activation=tf.nn.relu)
+            out = tf.layers.dense(fullLayer, num_actions)
 
         ##############################################################
         ######################## END YOUR CODE #######################
