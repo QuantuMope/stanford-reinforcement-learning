@@ -1,5 +1,5 @@
-import tensorflow as tf
-import tensorflow.contrib.layers as layers
+import tensorflow.compat.v1 as tf
+#import tensorflow.contrib.layers as layers
 
 from utils.general import get_logger
 from utils.test_env import EnvTest
@@ -100,8 +100,8 @@ class Linear(DQN):
         ################ YOUR CODE HERE - 2-3 lines ################## 
 
         with tf.variable_scope(scope, reuse=reuse):
-            flat_tensor = tf.keras.layers.Flatten(state)
-            out = tf.keras.layers.Dense(flat_tensor)
+            flat_tensor = tf.layers.flatten(state)
+            out = tf.layers.dense(flat_tensor, num_actions)
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -148,7 +148,6 @@ class Linear(DQN):
         q_col = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=q_scope)
         target_q_col = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=target_q_scope)
         op = [tf.assign(target_q_col[i], q_col[i]) for i in range(len(q_col))]
-
         self.update_target_op = tf.group(*op)
 
         ##############################################################
@@ -188,8 +187,13 @@ class Linear(DQN):
         ##############################################################
         ##################### YOUR CODE HERE - 4-5 lines #############
 
-        not_done = 1 - tf.cast(self.done_mask, tf.int32)
-        Q_samp = self.r + not_done*self.config.gamma*tf.reduce_max(target_q)
+        done = tf.cast(self.done_mask, tf.float32)
+        Q_samp = self.r + (1 - done)*self.config.gamma*tf.reduce_max(target_q, axis=1)
+
+        a_one_hot = tf.one_hot(self.a, num_actions)
+        Q_sa = tf.reduce_sum(q * a_one_hot, axis=1)
+
+        self.loss = tf.reduce_mean((Q_samp - Q_sa)**2)
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -226,8 +230,15 @@ class Linear(DQN):
         ##############################################################
         #################### YOUR CODE HERE - 8-12 lines #############
 
-        pass
-        
+        with tf.variable_scope(scope):
+            opt = tf.train.AdamOptimizer(learning_rate=self.lr)
+            var_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+            grads = opt.compute_gradients(self.loss, var_list)
+            if self.config.grad_clip:
+                grads = [(tf.clip_by_norm(item[0], self.config.clip_val), item[1]) for item in grads]
+            self.train_op = opt.apply_gradients(grads)
+            self.grad_norm = tf.global_norm([item[0] for item in grads])
+
         ##############################################################
         ######################## END YOUR CODE #######################
     
