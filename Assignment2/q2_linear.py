@@ -8,6 +8,7 @@ from q1_schedule import LinearExploration, LinearSchedule
 
 from configs.q2_linear import config
 
+tf.disable_eager_execution()
 
 class Linear(DQN):
     """
