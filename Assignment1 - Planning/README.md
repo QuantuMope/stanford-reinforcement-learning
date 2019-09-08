@@ -1,4 +1,4 @@
-## Assignment 1 - Intro to Sequential Decision Making and OpenAI Gym
+## [Assignment 1 - Intro to Sequential Decision Making and OpenAI Gym](http://web.stanford.edu/class/cs234/assignment1/index.html)
 
 This assignment contains written questions as well as coding assignments. We use dynamic programming methods to compute optimal policies given a perfect model of the environment as a Markov decision process.
 
