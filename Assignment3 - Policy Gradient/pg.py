@@ -54,7 +54,14 @@ def build_mlp(
   """
   #######################################################
   #########   YOUR CODE HERE - 7-20 lines.   ############
-  return # TODO
+
+  with tf.variable_scope(scope):
+    model = tf.keras.models.Sequential([
+      tf.keras.layers.Dense(size, activation=tf.nn.relu) for _ in range(n_layers)])
+    model.append(tf.keras.layers.Dense(output_size, activation=output_activation))
+    out = model(mlp_input)
+
+  return out
   #######################################################
   #########          END YOUR CODE.          ############
 
@@ -111,14 +118,14 @@ class PG(object):
     """
     #######################################################
     #########   YOUR CODE HERE - 8-12 lines.   ############
-    self.observation_placeholder = # TODO
+    self.observation_placeholder = tf.placeholder(tf.float32, shape=self.observation_dim)
     if self.discrete:
-      self.action_placeholder = # TODO
+      self.action_placeholder = tf.placeholder(tf.float32, shape=self.action_dim)
     else:
-      self.action_placeholder = # TODO
+      self.action_placeholder = tf.placeholder(tf.float32, shape=self.action_dim)
 
     # Define a placeholder for advantages
-    self.advantage_placeholder = # TODO
+    self.advantage_placeholder = tf.placeholder(tf.float32, shape=self.observation_dim)
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -173,7 +180,7 @@ class PG(object):
     #########   YOUR CODE HERE - 5-10 lines.   ############
 
     if self.discrete:
-      action_logits =         # TODO
+      action_logits = build_mlp(self.action_placeholder, self.config.)
       self.sampled_action =   # TODO
       self.logprob =          # TODO
     else:
@@ -201,7 +208,7 @@ class PG(object):
 
     ######################################################
     #########   YOUR CODE HERE - 1-2 lines.   ############
-    self.loss = # TODO
+    self.loss = (1/D) tf.reduce_sum(tf.multiply(self.logprob, self.advantage_placeholder))
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -212,7 +219,7 @@ class PG(object):
     """
     ######################################################
     #########   YOUR CODE HERE - 1-2 lines.   ############
-    self.train_op = # TODO
+    self.train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss)
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -241,9 +248,11 @@ class PG(object):
     """
     ######################################################
     #########   YOUR CODE HERE - 4-8 lines.   ############
-    self.baseline = # TODO
-    self.baseline_target_placeholder = # TODO
-    self.update_baseline_op = # TODO
+    self.baseline = tf.queeze(build_mlp(self.observation_placeholder, 1, scope,
+                              self.config.n_layers, self.config.layer_size))
+    self.baseline_target_placeholder = tf.placeholder(tf.float32)
+    loss = tf.losses.mean_squared_error(self.baseline_target_placeholder, self.avg_reward_placeholder, scope=scope)
+    self.update_baseline_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
     #######################################################
     #########          END YOUR CODE.          ############
 
