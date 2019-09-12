@@ -60,17 +60,10 @@ def build_mlp(
 
   with tf.variable_scope(scope):
     model = tf.keras.models.Sequential([
-      tf.keras.layers.Dense(size, activation=tf.nn.relu)])
-    for _ in range(n_layers-1):
-      model.add(tf.keras.layers.Dense(size, activation=tf.nn.relu))
+      tf.keras.layers.Dense(size, activation=tf.nn.relu) for _ in range(n_layers)])
     model.add(tf.keras.layers.Dense(output_size, activation=output_activation))
     out = model(mlp_input)
 
-  # with tf.variable_scope(scope):
-  #   input = mlp_input
-  #   for _ in range(n_layers):
-  #     input = tf.layers.dense(input, size, activation=tf.nn.relu)
-  #   out = tf.layers.dense(input, output_size, activation=output_activation)
   return out
   #######################################################
   #########          END YOUR CODE.          ############
@@ -130,14 +123,13 @@ class PG(object):
     #########   YOUR CODE HERE - 8-12 lines.   ############
     obs_shape = self.env.observation_space.shape
     self.observation_placeholder = tf.placeholder(tf.float32, shape=(None,)+obs_shape)
-    print(obs_shape)
     if self.discrete:
-      self.action_placeholder = tf.placeholder(tf.int32)
+      self.action_placeholder = tf.placeholder(tf.int32, shape=(None,))
     else:
-      self.action_placeholder = tf.placeholder(tf.float32)
+      self.action_placeholder = tf.placeholder(tf.float32, shape=(None,))
 
     # Define a placeholder for advantages
-    self.advantage_placeholder = tf.placeholder(tf.float32)
+    self.advantage_placeholder = tf.placeholder(tf.float32, shape=(None,))
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -194,7 +186,7 @@ class PG(object):
     if self.discrete:
       action_logits = build_mlp(self.observation_placeholder, self.action_dim, scope,
                                 self.config.n_layers, self.config.layer_size)
-      self.sampled_action = tf.squeeze(tf.random.categorical(action_logits, self.action_dim))
+      self.sampled_action = tf.squeeze(tf.random.categorical(action_logits, 1), axis=1)
       self.logprob = -tf.nn.sparse_softmax_cross_entropy_with_logits(logits=action_logits,
                                                                      labels=self.action_placeholder)
     else:
@@ -225,8 +217,7 @@ class PG(object):
     ######################################################
     #########   YOUR CODE HERE - 1-2 lines.   ############
 
-    self.loss = (1/self.observation_dim) * tf.reduce_sum(
-                tf.multiply(self.logprob, self.advantage_placeholder))
+    self.loss = tf.reduce_sum(tf.multiply(self.logprob, self.advantage_placeholder))
 
     #######################################################
     #########          END YOUR CODE.          ############
@@ -271,8 +262,8 @@ class PG(object):
     #########   YOUR CODE HERE - 4-8 lines.   ############
 
     self.baseline = tf.squeeze(build_mlp(self.observation_placeholder, 1, scope,
-                                         self.config.n_layers, self.config.layer_size))
-    self.baseline_target_placeholder = tf.placeholder(tf.float32)
+                                         self.config.n_layers, self.config.layer_size), axis=1)
+    self.baseline_target_placeholder = tf.placeholder(tf.float32, shape=(None,))
     loss = tf.losses.mean_squared_error(self.baseline,
                                         self.baseline_target_placeholder, scope=scope)
     self.update_baseline_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
@@ -330,10 +321,10 @@ class PG(object):
     self.eval_reward_placeholder = tf.placeholder(tf.float32, shape=(), name="eval_reward")
 
     # extra summaries from python -> placeholders
-    tf.summary.scalar("Avg Reward", self.avg_reward_placeholder)
-    tf.summary.scalar("Max Reward", self.max_reward_placeholder)
-    tf.summary.scalar("Std Reward", self.std_reward_placeholder)
-    tf.summary.scalar("Eval Reward", self.eval_reward_placeholder)
+    tf.summary.scalar("Avg_Reward", self.avg_reward_placeholder)
+    tf.summary.scalar("Max_Reward", self.max_reward_placeholder)
+    tf.summary.scalar("Std_Reward", self.std_reward_placeholder)
+    tf.summary.scalar("Eval_Reward", self.eval_reward_placeholder)
 
     # logging
     self.merged = tf.summary.merge_all()
@@ -513,9 +504,10 @@ class PG(object):
     #########   YOUR CODE HERE - 5-10 lines.   ############
 
     if self.config.use_baseline:
-      self.baseline = self.sess.run(self.baseline,
-                                    feed_dict={self.observation_placeholder : observations})
-      adv = returns - self.baseline
+
+      baseline = self.sess.run(self.baseline,
+                               feed_dict={self.observation_placeholder : observations})
+      adv = returns - baseline
     if self.config.normalize_advantage:
       adv = (adv - adv.mean()) / adv.var()
 
@@ -537,9 +529,9 @@ class PG(object):
     #######################################################
     #########   YOUR CODE HERE - 1-5 lines.   ############
 
-    self.baseline = self.sess.run(self.update_baseline_op,
-                                  feed_dict={self.observation_placeholder: observations,
-                                             self.baseline_target_placeholder : returns})
+    self.sess.run(self.update_baseline_op,
+                  feed_dict={self.observation_placeholder: observations,
+                             self.baseline_target_placeholder : returns})
 
     #######################################################
     #########          END YOUR CODE.          ############
