@@ -6,7 +6,7 @@ import sys
 import logging
 import time
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import gym
 import scipy.signal
 import os
@@ -21,6 +21,9 @@ parser.add_argument('--env_name', required=True, type=str,
 parser.add_argument('--baseline', dest='use_baseline', action='store_true')
 parser.add_argument('--no-baseline', dest='use_baseline', action='store_false')
 parser.set_defaults(use_baseline=True)
+
+# NOTE - disable eager execution for placeholder
+tf.disable_eager_execution()
 
 def build_mlp(
           mlp_input,
@@ -57,10 +60,17 @@ def build_mlp(
 
   with tf.variable_scope(scope):
     model = tf.keras.models.Sequential([
-      tf.keras.layers.Dense(size, activation=tf.nn.relu) for _ in range(n_layers)])
-    model.append(tf.keras.layers.Dense(output_size, activation=output_activation))
+      tf.keras.layers.Dense(size, activation=tf.nn.relu)])
+    for _ in range(n_layers-1):
+      model.add(tf.keras.layers.Dense(size, activation=tf.nn.relu))
+    model.add(tf.keras.layers.Dense(output_size, activation=output_activation))
     out = model(mlp_input)
 
+  # with tf.variable_scope(scope):
+  #   input = mlp_input
+  #   for _ in range(n_layers):
+  #     input = tf.layers.dense(input, size, activation=tf.nn.relu)
+  #   out = tf.layers.dense(input, output_size, activation=output_activation)
   return out
   #######################################################
   #########          END YOUR CODE.          ############
@@ -118,14 +128,16 @@ class PG(object):
     """
     #######################################################
     #########   YOUR CODE HERE - 8-12 lines.   ############
-    self.observation_placeholder = tf.placeholder(tf.float32, shape=self.observation_dim)
+    obs_shape = self.env.observation_space.shape
+    self.observation_placeholder = tf.placeholder(tf.float32, shape=(None,)+obs_shape)
+    print(obs_shape)
     if self.discrete:
-      self.action_placeholder = tf.placeholder(tf.float32, shape=self.action_dim)
+      self.action_placeholder = tf.placeholder(tf.int32)
     else:
-      self.action_placeholder = tf.placeholder(tf.float32, shape=self.action_dim)
+      self.action_placeholder = tf.placeholder(tf.float32)
 
     # Define a placeholder for advantages
-    self.advantage_placeholder = tf.placeholder(tf.float32, shape=self.observation_dim)
+    self.advantage_placeholder = tf.placeholder(tf.float32)
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -180,14 +192,18 @@ class PG(object):
     #########   YOUR CODE HERE - 5-10 lines.   ############
 
     if self.discrete:
-      action_logits = build_mlp(self.action_placeholder, self.config.)
-      self.sampled_action =   # TODO
-      self.logprob =          # TODO
+      action_logits = build_mlp(self.observation_placeholder, self.action_dim, scope,
+                                self.config.n_layers, self.config.layer_size)
+      self.sampled_action = tf.squeeze(tf.random.categorical(action_logits, self.action_dim))
+      self.logprob = -tf.nn.sparse_softmax_cross_entropy_with_logits(logits=action_logits,
+                                                                     labels=self.action_placeholder)
     else:
-      action_means =          # TODO
-      log_std =               # TODO
-      self.sampled_action =   # TODO
-      self.logprob =          # TODO
+      action_means = build_mlp(self.action_placeholder, self.action_dim, scope,
+                               self.config.n_layers, self.config.layer_size)
+      log_std = tf.get_variables("log_std")
+      self.sampled_action = tf.random.normal(action_means, mean=0, stddev=1)
+      self.logprob = -tf.nn.sparse_softmax_cross_entropy_with_logits(logits=action_means)
+
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -208,7 +224,10 @@ class PG(object):
 
     ######################################################
     #########   YOUR CODE HERE - 1-2 lines.   ############
-    self.loss = (1/D) tf.reduce_sum(tf.multiply(self.logprob, self.advantage_placeholder))
+
+    self.loss = (1/self.observation_dim) * tf.reduce_sum(
+                tf.multiply(self.logprob, self.advantage_placeholder))
+
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -219,7 +238,9 @@ class PG(object):
     """
     ######################################################
     #########   YOUR CODE HERE - 1-2 lines.   ############
+
     self.train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss)
+
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -248,11 +269,14 @@ class PG(object):
     """
     ######################################################
     #########   YOUR CODE HERE - 4-8 lines.   ############
-    self.baseline = tf.queeze(build_mlp(self.observation_placeholder, 1, scope,
-                              self.config.n_layers, self.config.layer_size))
+
+    self.baseline = tf.squeeze(build_mlp(self.observation_placeholder, 1, scope,
+                                         self.config.n_layers, self.config.layer_size))
     self.baseline_target_placeholder = tf.placeholder(tf.float32)
-    loss = tf.losses.mean_squared_error(self.baseline_target_placeholder, self.avg_reward_placeholder, scope=scope)
+    loss = tf.losses.mean_squared_error(self.baseline,
+                                        self.baseline_target_placeholder, scope=scope)
     self.update_baseline_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+
     #######################################################
     #########          END YOUR CODE.          ############
 
@@ -442,7 +466,14 @@ class PG(object):
       rewards = path["reward"]
       #######################################################
       #########   YOUR CODE HERE - 5-10 lines.   ############
-      returns = # TODO
+
+      returns = [None]*len(rewards)
+      for i, reward in enumerate(rewards):
+        if i == 0:
+          returns[0] = reward
+          continue
+        returns[i] = reward + self.config.gamma*returns[i-1]
+
       #######################################################
       #########          END YOUR CODE.          ############
       all_returns.append(returns)
@@ -480,10 +511,14 @@ class PG(object):
     adv = returns
     #######################################################
     #########   YOUR CODE HERE - 5-10 lines.   ############
+
     if self.config.use_baseline:
-      # TODO
+      self.baseline = self.sess.run(self.baseline,
+                                    feed_dict={self.observation_placeholder : observations})
+      adv = returns - self.baseline
     if self.config.normalize_advantage:
-      # TODO
+      adv = (adv - adv.mean()) / adv.var()
+
     #######################################################
     #########          END YOUR CODE.          ############
     return adv
@@ -501,7 +536,11 @@ class PG(object):
     """
     #######################################################
     #########   YOUR CODE HERE - 1-5 lines.   ############
-    pass # TODO
+
+    self.baseline = self.sess.run(self.update_baseline_op,
+                                  feed_dict={self.observation_placeholder: observations,
+                                             self.baseline_target_placeholder : returns})
+
     #######################################################
     #########          END YOUR CODE.          ############
 
