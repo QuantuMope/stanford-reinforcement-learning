@@ -265,7 +265,7 @@ class PG(object):
                                          self.config.n_layers, self.config.layer_size), axis=1)
     self.baseline_target_placeholder = tf.placeholder(tf.float32, shape=(None,))
     loss = tf.losses.mean_squared_error(self.baseline,
-                                        self.baseline_target_placeholder, scope=scope)
+                                        self.baseline_target_placeholder)
     self.update_baseline_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
 
     #######################################################
