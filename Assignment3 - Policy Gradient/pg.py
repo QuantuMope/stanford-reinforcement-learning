@@ -65,6 +65,7 @@ def build_mlp(
     out = model(mlp_input)
 
   return out
+
   #######################################################
   #########          END YOUR CODE.          ############
 
@@ -217,7 +218,7 @@ class PG(object):
     ######################################################
     #########   YOUR CODE HERE - 1-2 lines.   ############
 
-    self.loss = tf.reduce_sum(tf.multiply(self.logprob, self.advantage_placeholder))
+    self.loss = tf.reduce_sum(tf.multiply(-self.logprob, self.advantage_placeholder))
 
     #######################################################
     #########          END YOUR CODE.          ############
@@ -265,7 +266,7 @@ class PG(object):
                                          self.config.n_layers, self.config.layer_size), axis=1)
     self.baseline_target_placeholder = tf.placeholder(tf.float32, shape=(None,))
     loss = tf.losses.mean_squared_error(self.baseline,
-                                        self.baseline_target_placeholder)
+                                        self.baseline_target_placeholder, scope=scope)
     self.update_baseline_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
 
     #######################################################
@@ -458,12 +459,16 @@ class PG(object):
       #######################################################
       #########   YOUR CODE HERE - 5-10 lines.   ############
 
+      first_loop = True
       returns = [None]*len(rewards)
-      for i, reward in enumerate(rewards):
-        if i == 0:
-          returns[0] = reward
+      for i, reward in reversed(list(enumerate(rewards))):
+        if first_loop:
+          first_loop = False
+          returns[i] = reward
           continue
-        returns[i] = reward + self.config.gamma*returns[i-1]
+        returns[i] = reward + self.config.gamma*returns[i+1]
+
+      assert(None not in returns)
 
       #######################################################
       #########          END YOUR CODE.          ############
@@ -506,7 +511,7 @@ class PG(object):
     if self.config.use_baseline:
 
       baseline = self.sess.run(self.baseline,
-                               feed_dict={self.observation_placeholder : observations})
+                               feed_dict={self.observation_placeholder: observations})
       adv = returns - baseline
     if self.config.normalize_advantage:
       adv = (adv - adv.mean()) / adv.var()
@@ -531,7 +536,7 @@ class PG(object):
 
     self.sess.run(self.update_baseline_op,
                   feed_dict={self.observation_placeholder: observations,
-                             self.baseline_target_placeholder : returns})
+                             self.baseline_target_placeholder: returns})
 
     #######################################################
     #########          END YOUR CODE.          ############
